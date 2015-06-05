@@ -1,0 +1,21 @@
+# Remote SSH connection details
+remote_ssh_url: "remoteserver.example.com:22"
+remote_ssh_user: "bob"
+remote_ssh_key: "/home/bob/.ssh/bobs_key"
+
+# Remote Transmission connection details
+transmission_url: "http://remoteserver.example.com:9091"
+transmission_user: "transmission"
+transmission_password: "passw0rd"
+
+# Database connection 
+mysql_host: "localhost"
+mysql_port: "3306"
+mysql_user: "autotorrent"
+mysql_password: "passw0rd"
+mysql_database: "autotorrent"
+
+# Downloads
+incomplete_download_dir: "/download/incomplete"
+completed_dowload_dir: "/download"
+max_concurrent_downloads: 5
