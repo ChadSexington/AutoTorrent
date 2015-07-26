@@ -230,12 +230,12 @@ func (ds *Datastore) GetDownloadFiles(dl Download) (files []DownloadFile, err er
 	var id int
 	var name string
 	var finished bool
+	var downloadId int
 	var remotePath string
 	var localPath string
-	var downloadId int
 	var dlFile DownloadFile
 	for rows.Next() {
-		err = rows.Scan(&id, &name, &finished, &remotePath, &localPath, &downloadId)
+		err = rows.Scan(&id, &name, &finished, &downloadId, &remotePath, &localPath)
 		if err != nil {
 			return files, err
 		}
