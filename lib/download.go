@@ -15,22 +15,6 @@ import (
 	"github.com/ChadSexington/go-transmission/transmission"
 )
 
-type Download struct {
-	ID       int
-	Name     string
-	Files    []DownloadFile
-	Complete bool
-}
-
-type DownloadFile struct {
-	ID         int
-	Name       string
-	Size       int
-	RemotePath string
-	LocalPath  string
-	Complete   bool
-}
-
 // Download all files from a torrent on the remote server
 // Will return nil if a download has already been downloaded.
 func DownloadTorrent(torrent transmission.Torrent, dl Download, ds Datastore, conf Conf) (err error) {

@@ -109,18 +109,19 @@ func (at *AutoTorrent) StartDaemon() error {
 					fmt.Printf("Unable to mark download of %s complete with error: %s\n", torrent.Name, err)
 				}
 			}()
-		} //end for
-
-		if currentDownloads == 0 {
-			fmt.Println("No new downloads, waiting a bit and looking again")
-			time.Sleep(time.Second * 30)
-		} else {
-			fmt.Printf("All downloads started, waiting for completion.")
-			// Wait for downloads to complete
-			wg.Wait()
-			fmt.Println("All downloads completed")
-		}
-	}
+		} //end torrent list loop
+		/*
+			if currentDownloads == 0 {
+				fmt.Println("No new downloads, waiting a bit and looking again")
+				time.Sleep(time.Second * 30)
+			} else {
+				fmt.Printf("All downloads started, waiting for completion.")
+				// Wait for downloads to complete
+				wg.Wait()
+				fmt.Println("All downloads completed")
+			}
+		*/
+	} //end main loop
 	return nil
 }
 

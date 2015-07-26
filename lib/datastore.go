@@ -34,6 +34,22 @@ type Datastore struct {
 	connection *sql.DB
 }
 
+type Download struct {
+	ID       int
+	Name     string
+	Files    []DownloadFile
+	Complete bool
+}
+
+type DownloadFile struct {
+	ID         int
+	Name       string
+	Size       int
+	RemotePath string
+	LocalPath  string
+	Complete   bool
+}
+
 // Get Datastore object
 func NewDatastore(host, port, username, password, database string) (ds Datastore, err error) {
 	conf := GetConfiguration()
@@ -259,7 +275,7 @@ func (ds *Datastore) DownloadComplete(dl Download) error {
 
 // Set a file complete
 func (ds *Datastore) DownloadFileComplete(dlFile DownloadFile) error {
-	stmt, err := ds.connection.Prepare("UPDATE files SET finished=1 WHERE id=?")
+	stmt, err := ds.connection.Prepare("UPDATE files SET finished=true WHERE id=?")
 	if err != nil {
 		return err
 	}
