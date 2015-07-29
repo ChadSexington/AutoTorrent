@@ -32,7 +32,9 @@ func (at *AutoTorrent) StartDaemon() error {
 		torrentList, err := at.Transmission.GetDownloadedTorrents()
 		if err != nil {
 			fmt.Println("Unable to get completed torrent list with error", err)
-			return err
+			fmt.Println("Waiting 30 seconds and trying again...")
+			time.Sleep(30 * time.Second)
+			continue
 		}
 
 		// Instantiate a waitgroup
@@ -52,7 +54,7 @@ func (at *AutoTorrent) StartDaemon() error {
 				// Handle pre-existing entries
 				if err.Error() == "Duplicate entry" {
 					if dl.Complete {
-						fmt.Printf("Torrent %s already downloaded, skipping...\n", torrent.Name)
+						// Skip download
 						continue
 					} else {
 						fmt.Printf("Torrent with name %s already in database, but not finished. Downloading...\n", torrent.Name)
@@ -78,10 +80,11 @@ func (at *AutoTorrent) StartDaemon() error {
 					localPath := filepath.Join(at.Conf.DownloadDir, torFile.Name)
 					dlFile, err := at.Datastore.NewDownloadFile(torFile.Name, remotePath, localPath, false, dl.ID)
 					if err != nil {
-						return err
+						fmt.Println("Unable to create new download file for new torrent with error: ", err)
+					} else {
+						// Add entry to download
+						dl.Files = append(dl.Files, dlFile)
 					}
-					// Add entry to download
-					dl.Files = append(dl.Files, dlFile)
 				}
 			}
 
@@ -102,14 +105,16 @@ func (at *AutoTorrent) StartDaemon() error {
 				err = atsupport.DownloadTorrent(torrent, dl, at.Datastore, at.Conf)
 				if err != nil {
 					fmt.Printf("Unable to download torrent %s with error: %s\n", torrent.Name, err)
-				}
-				fmt.Println("Download of torrent Complete:", torrent.Name)
-				err = at.Datastore.DownloadComplete(dl)
-				if err != nil {
-					fmt.Printf("Unable to mark download of %s complete with error: %s\n", torrent.Name, err)
+				} else {
+					fmt.Println("Download of torrent Complete:", torrent.Name)
+					err = at.Datastore.DownloadComplete(dl)
+					if err != nil {
+						fmt.Printf("Unable to mark download of %s complete with error: %s\n", torrent.Name, err)
+					}
 				}
 			}()
 		} //end torrent list loop
+		time.Sleep(300 * time.Second)
 		/*
 			if currentDownloads == 0 {
 				fmt.Println("No new downloads, waiting a bit and looking again")
@@ -122,6 +127,7 @@ func (at *AutoTorrent) StartDaemon() error {
 			}
 		*/
 	} //end main loop
+	fmt.Println("Somehow got out of main loop, ending...")
 	return nil
 }
 
