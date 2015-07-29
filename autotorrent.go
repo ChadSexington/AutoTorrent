@@ -27,6 +27,8 @@ func New() AutoTorrent {
 
 // Start the daemon
 func (at *AutoTorrent) StartDaemon() error {
+	var currentDownloads []int
+MainLoop:
 	for {
 		// Get list of torrents from transmissoin
 		torrentList, err := at.Transmission.GetDownloadedTorrents()
@@ -34,16 +36,16 @@ func (at *AutoTorrent) StartDaemon() error {
 			fmt.Println("Unable to get completed torrent list with error", err)
 			fmt.Println("Waiting 30 seconds and trying again...")
 			time.Sleep(30 * time.Second)
-			continue
+			continue MainLoop
 		}
 
 		// Instantiate a waitgroup
 		var wg sync.WaitGroup
 
-		currentDownloads := 0
 		var preExisting bool
 		// Loop through torrents
 		// to download the torrents
+	TorrentLoop:
 		for x := 0; x < len(torrentList); x++ {
 			torrent := torrentList[x]
 			preExisting = false
@@ -55,20 +57,20 @@ func (at *AutoTorrent) StartDaemon() error {
 				if err.Error() == "Duplicate entry" {
 					if dl.Complete {
 						// Skip download
-						continue
+						continue TorrentLoop
 					} else {
 						fmt.Printf("Torrent with name %s already in database, but not finished. Downloading...\n", torrent.Name)
 						preExisting = true
 						dl, err = at.Datastore.GetDownloadByName(torrent.Name)
 						if err != nil {
 							fmt.Printf("Could not get download for torrent %s, skipping...\n", torrent.Name)
-							continue
+							continue TorrentLoop
 						}
 					}
 				} else {
 					fmt.Printf("Error getting download for torrent %s: %s\n", torrent.Name, err)
 					fmt.Printf("Skipping download for torrent %s due to above errors\n", torrent.Name)
-					continue
+					continue TorrentLoop
 				}
 			}
 
@@ -91,15 +93,32 @@ func (at *AutoTorrent) StartDaemon() error {
 			fmt.Printf("Created or found existing download for %s\n", torrent.Name)
 
 			// If max downloads are happening, wait
-			for currentDownloads >= at.Conf.MaxConcurrentDownloads {
+			for len(currentDownloads) >= at.Conf.MaxConcurrentDownloads {
 				time.Sleep(time.Second * 30)
+			}
+
+			for _, x := range currentDownloads {
+				if x == dl.ID {
+					fmt.Printf("%s is already downloading, skipping...\n", dl.Name)
+					continue TorrentLoop
+				}
 			}
 
 			wg.Add(1)
 			// Download the torrent in a goroutine
 			go func() {
-				currentDownloads = currentDownloads + 1
-				defer func() { currentDownloads = currentDownloads - 1 }()
+				currentDownloads = append(currentDownloads, dl.ID)
+				// Ensure download id is removed from slice when download is complete
+				defer func() {
+					for i, x := range currentDownloads {
+						if x == dl.ID {
+							// Remove from currentDownloads slice
+							// https://github.com/golang/go/wiki/SliceTricks
+							currentDownloads = append(currentDownloads[:i], currentDownloads[i+1:]...)
+						}
+					}
+				}()
+				// Ensure waitgroup is cleared after goroutine finishes.
 				defer wg.Done()
 				fmt.Println("Downloading torrent", torrent.Name)
 				err = atsupport.DownloadTorrent(torrent, dl, at.Datastore, at.Conf)
@@ -114,6 +133,8 @@ func (at *AutoTorrent) StartDaemon() error {
 				}
 			}()
 		} //end torrent list loop
+
+		// Wait between each time contacting the torrent server
 		time.Sleep(300 * time.Second)
 		/*
 			if currentDownloads == 0 {
